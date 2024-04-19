@@ -32,13 +32,13 @@ const requestLogger = (request, response, next) => {
     console.log('Body:  ', request.body)
     console.log('---')
     next()
-  }
+}
   
-  const cors = require('cors')
-  app.use(cors())
-  
-  const morgan = require('morgan')
-  app.use(morgan('tiny'))
+const cors = require('cors')
+app.use(cors())
+
+const morgan = require('morgan')
+app.use(morgan('tiny'))
 
 app.use(express.json())
 app.use(requestLogger)
@@ -70,7 +70,7 @@ app.get('/api/persons/:id', (request, response) => {
     }
 })
 
-app.delete('/api/contacts/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response) => {
     const id = Number(request.params.id)
     contacts = contacts.filter(contact => contact.id !== id)
 

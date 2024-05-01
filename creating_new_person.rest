@@ -5,6 +5,25 @@ POST http://localhost:3001/api/persons/ HTTP/1.1
 content-type: application/json
 
 {
-    "name": "Arto Hellas",
-    "number": "123123123"
+    "name": "Mario Bros",
+    "number": "777-555555"
 }
+
+###
+DELETE http://localhost:3001/api/persons/662d519bfa9432541b3ee8d3 HTTP/1.1
+
+###
+
+PUT http://localhost:3001/api/persons/662fcd138d1d3fdd224c8750 HTTP/1.1
+content-type: application/json
+
+{
+    "name": "Mario Bros",
+    "number": "777-5555"
+}
+
+###
+GET http://localhost:3001/api/persons/662fcd138d1d3fdd224c8750 HTTP/1.1
+
+###
+GET http://localhost:3001/api/info HTTP/1.1

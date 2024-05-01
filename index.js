@@ -1,28 +1,10 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
+const Contact = require('./models/person')
 
-let contacts = [
-    { 
-        "id": 1,
-        "name": "Arto Hellas", 
-        "number": "040-123456"
-    },
-    { 
-        "id": 2,
-        "name": "Ada Lovelace", 
-        "number": "39-44-5323523"
-    },
-    { 
-        "id": 3,
-        "name": "Dan Abramov", 
-        "number": "12-43-234345"
-    },
-    { 
-        "id": 4,
-        "name": "Mary Poppendieck", 
-        "number": "39-23-6423122"
-    }
-]
+
+let contacts = []
 
 app.use(express.static('dist'))
 
@@ -33,7 +15,19 @@ const requestLogger = (request, response, next) => {
     console.log('---')
     next()
 }
-  
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
+    }
+
+    next(error)
+}
+
 const cors = require('cors')
 app.use(cors())
 
@@ -48,7 +42,9 @@ const unknownEndpoint = (request, response) => {
 }
   
 app.get('/api/persons', (request, response) => {
-    response.json(contacts)
+    Contact.find({}).then(contacts => {
+        response.json(contacts)
+    })
 })
 
 app.get('/api/info', (request, response) => {
@@ -56,63 +52,57 @@ app.get('/api/info', (request, response) => {
         `<p>Phonebook has info for ${contacts.length} people</p><br/>`,
         `<p>${new Date()}</p>`
     ]*/
-    const res = `<p>Phonebook has info for ${contacts.length} people</p><br/><p>${new Date()}</p>`
-    response.send(res)
+    Contact.find({}).then(contacts => {
+        const res = `<p>Phonebook has info for ${contacts.length} people</p><br/><p>${new Date()}</p>`
+        response.send(res)
+    })
 })
 
 app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const contact = contacts.find(contact => contact.id === id)
-    if (contact) {
+    Contact.findById(request.params.id).then(contact => {
         response.json(contact)
-    } else {
-        response.status(404).end()
-    }
+    })
 })
 
 app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    contacts = contacts.filter(contact => contact.id !== id)
-
-    response.status(204).end()
+    Contact.findByIdAndDelete(request.params.id)
+    .then(contact => {
+        response.status(204).end()
+    })
+    .catch(error => next(error))
 })
 
-const generateId = () => {
-    const maxId = contacts.length > 0
-        ? Math.max(...contacts.map(n => n.id))
-        : 0
-    return maxId + 1
-}
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
 
-    if (!body.name || !body.number) {
-        return response.status(400).json({
-            error: 'name or number missing'
-        })
-    }
-    
-    const found = contacts.find(contact => contact.name === body.name)
-    if (found) {
-        return response.status(400).json({
-            error: 'The name already exists in the agenda'
-        })
-    }
-    const contact = {
+    const contact = new Contact({
         name: body.name,
         number: body.number,
-        id: generateId()
-    }
+    })
 
-    contacts = contacts.concat(contact)
-    response.json(contact)
+    contact.save()
+        .then(savedContact => {
+            response.json(savedContact)
+        })
+        .catch(error => next(error))
+})
+
+app.put('/api/persons/:id', (request, response) => {
+    const {name, number} = request.body
+
+    Contact.findByIdAndUpdate(request.params.id, {name, number}, { new: true, runValidators: true, context: 'query'})
+        .then(updatedContact => {
+            response.json(updatedContact)
+        })
+        .catch(error => next(error))
 })
 
 
 app.use(unknownEndpoint)
+app.use(errorHandler)
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
